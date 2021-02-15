@@ -1,7 +1,6 @@
 package docusign
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	jose "github.com/dvsekhvalnov/jose2go"
+	jose_rsa "github.com/dvsekhvalnov/jose2go/keys/rsa"
 	errortools "github.com/leapforce-libraries/go_errortools"
 	go_http "github.com/leapforce-libraries/go_http"
 	oauth2 "github.com/leapforce-libraries/go_oauth2"
@@ -21,11 +21,6 @@ type AccessToken struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
-}
-
-type JWTHeader struct {
-	Algorithm string `json:"alg"`
-	Type      string `json:"typ"`
 }
 
 type JWTBody struct {
@@ -42,14 +37,6 @@ func (service *Service) GetAccessToken() (*oauth2.Token, *errortools.Error) {
 	if service.isDemo {
 		urlDomain = TokenURLDemo
 	}
-
-	// jwt header
-	jwtHeader := JWTHeader{"HS256", "JWT"}
-	bHeader, err := json.Marshal(jwtHeader)
-	if err != nil {
-		return nil, errortools.ErrorMessage(err)
-	}
-	header := base64.URLEncoding.EncodeToString(bHeader)
 
 	// jwt body
 	now := time.Now()
@@ -68,13 +55,22 @@ func (service *Service) GetAccessToken() (*oauth2.Token, *errortools.Error) {
 	if err != nil {
 		return nil, errortools.ErrorMessage(err)
 	}
-	body := base64.URLEncoding.EncodeToString(bBody)
 
-	fmt.Println(jwtBody)
+	// jwt signature
+	privateKey, err := jose_rsa.ReadPrivate([]byte(service.privateKey))
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	jwt, err := jose.Sign(fmt.Sprintf("%s.%s", header, body), jose.HS256, []byte(service.privateKey))
+	err = privateKey.Validate()
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	fmt.Println(jwt)
+	jwt, err := jose.SignBytes(bBody, jose.RS256, privateKey, jose.Header("typ", "JWT"))
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	accessToken := AccessToken{}
 

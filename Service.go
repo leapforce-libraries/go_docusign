@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	APIName      string = "DocuSign"
-	APIURL       string = "https://demo.docusign.com/restapi/v2.1"
-	APIURLDemo   string = "https://demo.docusign.net/restapi/v2.1"
-	AuthURL      string = "https://account.docusign.com/oauth/auth"
-	AuthURLDemo  string = "https://account-d.docusign.com/oauth/auth"
-	TokenURL     string = "https://account.docusign.com/oauth/token"
-	TokenURLDemo string = "https://account-d.docusign.com/oauth/token"
-	RedirectURL  string = "http://localhost:8080/oauth/redirect"
-	CustomState  string = "Leapforce!DocuSign"
+	APIName         string = "DocuSign"
+	UserInfoURL     string = "https://account.docusign.com/oauth/userinfo"
+	UserInfoURLDemo string = "https://account-d.docusign.com/oauth/userinfo"
+	AuthURL         string = "https://account.docusign.com/oauth/auth"
+	AuthURLDemo     string = "https://account-d.docusign.com/oauth/auth"
+	TokenURL        string = "https://account.docusign.com/oauth/token"
+	TokenURLDemo    string = "https://account-d.docusign.com/oauth/token"
+	RedirectURL     string = "http://localhost:8080/oauth/redirect"
+	CustomState     string = "Leapforce!DocuSign"
 )
 
 // Service stores Service configuration
@@ -34,9 +34,10 @@ type Service struct {
 	privateKey     string
 	scopes         string
 	isDemo         bool
+	userInfo       *UserInfo
+	baseURIs       map[string]string
 	oAuth2         *oauth2.OAuth2
 }
-
 type ServiceConfig struct {
 	UserName              string
 	IntegrationKey        string
@@ -180,12 +181,34 @@ func (service *Service) delete(requestConfig *go_http.RequestConfig) (*http.Requ
 	return service.oAuth2.Delete(requestConfig)
 }
 
-func (service *Service) url(path string) string {
-	if service.isDemo {
-		return fmt.Sprintf("%s/%s", APIURLDemo, path)
-	} else {
-		return fmt.Sprintf("%s/%s", APIURL, path)
+func (service *Service) url(accountID string, path string) (string, *errortools.Error) {
+	if service.baseURIs == nil {
+		// get userinfo
+		userInfo, e := service.GetUserInfo()
+		if e != nil {
+			return "", e
+		}
+		service.userInfo = userInfo
+		service.baseURIs = make(map[string]string)
 	}
+
+	baseURI, ok := service.baseURIs[accountID]
+	if ok {
+		goto found
+	}
+
+	for _, account := range service.userInfo.Accounts {
+		if account.AccountID == accountID {
+			baseURI = account.BaseURI
+			service.baseURIs[accountID] = baseURI
+			goto found
+		}
+	}
+
+	return "", errortools.ErrorMessage(fmt.Sprintf("UserInfo does not contain info for account '%s'", accountID))
+found:
+
+	return fmt.Sprintf("%s/restapi/v2.1/%s", baseURI, path), nil
 }
 
 func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
