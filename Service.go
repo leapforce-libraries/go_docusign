@@ -3,11 +3,9 @@ package docusign
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	google "github.com/leapforce-libraries/go_google"
@@ -24,6 +22,7 @@ const (
 	AuthURLDemo          string = "https://account-d.docusign.com/oauth/auth"
 	TokenURL             string = "https://start.exactonline.nl/api/oauth2/token"
 	RedirectURL          string = "http://localhost:8080/oauth/redirect"
+	Scopes               string = "impersonation signature user_read user_write"
 	CustomState          string = "Leapforce!DocuSign"
 	AccessTokenMethod    string = http.MethodPost
 	AccessTokenGrantType string = "client_credentials"
@@ -33,6 +32,7 @@ const (
 // Service stores Service configuration
 //
 type Service struct {
+	clientID       string
 	integrationKey string
 	isDemo         bool
 	oAuth2         *oauth2.OAuth2
@@ -89,15 +89,26 @@ func (service *Service) ValidateToken() (*oauth2.Token, *errortools.Error) {
 }
 
 func (service *Service) InitToken() *errortools.Error {
+	if service == nil {
+		return errortools.ErrorMessage("Service variable is nil pointer")
+	}
+
+	authURL := AuthURL
+	if service.isDemo {
+		authURL = AuthURLDemo
+	}
+
 	values := url.Values{}
-	values.Set("response_type", "code")
-	values.Set("scope", "")
 	values.Set("client_id", service.integrationKey)
-	values.Set("state", CustomState)
+	values.Set("response_type", "code")
 	values.Set("redirect_uri", RedirectURL)
+	values.Set("scope", Scopes)
+	values.Set("state", CustomState)
+
+	url2 := fmt.Sprintf("%s?%s", authURL, values.Encode())
 
 	fmt.Println("Go to this url to get new access token:\n")
-	fmt.Printf("%s?%s\n", AuthURLDemo, values.Encode())
+	fmt.Println(url2 + "\n")
 
 	// Create a new redirect route
 	http.HandleFunc("/oauth/redirect", func(w http.ResponseWriter, r *http.Request) {
@@ -110,11 +121,8 @@ func (service *Service) InitToken() *errortools.Error {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		code := r.FormValue("code")
-		_ = code
 
-		b, _ := ioutil.ReadAll(r.Response.Body)
-
-		fmt.Println(string(b))
+		fmt.Println(code)
 
 		/*ee := oa.getTokenFromCode(code)
 		if ee != nil {
@@ -127,17 +135,6 @@ func (service *Service) InitToken() *errortools.Error {
 	})
 
 	http.ListenAndServe(":8080", nil)
-
-	return nil
-}
-
-func ParseDateString(date string) *time.Time {
-	if len(date) >= 19 {
-		d, err := time.Parse("2006-01-02T15:04:05", date[:19])
-		if err == nil {
-			return &d
-		}
-	}
 
 	return nil
 }
