@@ -15,30 +15,33 @@ import (
 )
 
 const (
-	APIName              string = "DocuSign"
-	APIURL               string = "https://demo.docusign.com/restapi/v2.1"
-	APIURLDemo           string = "https://demo.docusign.net/restapi/v2.1"
-	AuthURL              string = "https://account.docusign.com/oauth/auth"
-	AuthURLDemo          string = "https://account-d.docusign.com/oauth/auth"
-	TokenURL             string = "https://start.exactonline.nl/api/oauth2/token"
-	RedirectURL          string = "http://localhost:8080/oauth/redirect"
-	CustomState          string = "Leapforce!DocuSign"
-	AccessTokenMethod    string = http.MethodPost
-	AccessTokenGrantType string = "client_credentials"
-	AccessTokenScope     string = "Elfskot.Api"
+	APIName      string = "DocuSign"
+	APIURL       string = "https://demo.docusign.com/restapi/v2.1"
+	APIURLDemo   string = "https://demo.docusign.net/restapi/v2.1"
+	AuthURL      string = "https://account.docusign.com/oauth/auth"
+	AuthURLDemo  string = "https://account-d.docusign.com/oauth/auth"
+	TokenURL     string = "https://account.docusign.com/oauth/token"
+	TokenURLDemo string = "https://account-d.docusign.com/oauth/token"
+	RedirectURL  string = "http://localhost:8080/oauth/redirect"
+	CustomState  string = "Leapforce!DocuSign"
 )
 
 // Service stores Service configuration
 //
 type Service struct {
-	clientID       string
+	userName       string
 	integrationKey string
+	privateKey     string
+	scopes         string
 	isDemo         bool
 	oAuth2         *oauth2.OAuth2
 }
 
 type ServiceConfig struct {
+	UserName              string
 	IntegrationKey        string
+	PrivateKey            string
+	Scopes                string
 	IsDemo                *bool
 	MaxRetries            *uint
 	SecondsBetweenRetries *uint32
@@ -47,8 +50,14 @@ type ServiceConfig struct {
 // methods
 //
 func NewService(serviceConfig ServiceConfig, bigQueryService *bigquery.Service) (*Service, *errortools.Error) {
+	if serviceConfig.UserName == "" {
+		return nil, errortools.ErrorMessage("UserName not provided")
+	}
 	if serviceConfig.IntegrationKey == "" {
 		return nil, errortools.ErrorMessage("IntegrationKey not provided")
+	}
+	if serviceConfig.PrivateKey == "" {
+		return nil, errortools.ErrorMessage("PrivateKey not provided")
 	}
 
 	isDemo := false
@@ -56,7 +65,10 @@ func NewService(serviceConfig ServiceConfig, bigQueryService *bigquery.Service) 
 		isDemo = *serviceConfig.IsDemo
 	}
 	service := Service{
+		userName:       serviceConfig.UserName,
 		integrationKey: serviceConfig.IntegrationKey,
+		privateKey:     serviceConfig.PrivateKey,
+		scopes:         serviceConfig.Scopes,
 		isDemo:         isDemo,
 	}
 
