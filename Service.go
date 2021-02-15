@@ -22,7 +22,6 @@ const (
 	AuthURLDemo          string = "https://account-d.docusign.com/oauth/auth"
 	TokenURL             string = "https://start.exactonline.nl/api/oauth2/token"
 	RedirectURL          string = "http://localhost:8080/oauth/redirect"
-	Scopes               string = "impersonation signature user_read user_write"
 	CustomState          string = "Leapforce!DocuSign"
 	AccessTokenMethod    string = http.MethodPost
 	AccessTokenGrantType string = "client_credentials"
@@ -88,7 +87,7 @@ func (service *Service) ValidateToken() (*oauth2.Token, *errortools.Error) {
 	return service.oAuth2.ValidateToken()
 }
 
-func (service *Service) InitToken() *errortools.Error {
+func (service *Service) InitToken(scopes string) *errortools.Error {
 	if service == nil {
 		return errortools.ErrorMessage("Service variable is nil pointer")
 	}
@@ -102,7 +101,7 @@ func (service *Service) InitToken() *errortools.Error {
 	values.Set("client_id", service.integrationKey)
 	values.Set("response_type", "code")
 	values.Set("redirect_uri", RedirectURL)
-	values.Set("scope", Scopes)
+	values.Set("scope", scopes)
 	values.Set("state", CustomState)
 
 	url2 := fmt.Sprintf("%s?%s", authURL, values.Encode())
