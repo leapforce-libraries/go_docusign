@@ -26,9 +26,9 @@ type Account struct {
 }
 
 func (service *Service) GetUserInfo() (*UserInfo, *errortools.Error) {
-	url := UserInfoURL
+	url := userInfoURL
 	if service.isDemo {
-		url = UserInfoURLDemo
+		url = userInfoURLDemo
 	}
 
 	userInfo := UserInfo{}

@@ -33,9 +33,9 @@ type JWTBody struct {
 }
 
 func (service *Service) GetAccessToken() (*oauth2.Token, *errortools.Error) {
-	urlDomain := TokenURL
+	urlDomain := tokenURL
 	if service.isDemo {
-		urlDomain = TokenURLDemo
+		urlDomain = tokenURLDemo
 	}
 
 	// jwt body

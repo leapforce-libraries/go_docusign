@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	APIName         string = "DocuSign"
-	UserInfoURL     string = "https://account.docusign.com/oauth/userinfo"
-	UserInfoURLDemo string = "https://account-d.docusign.com/oauth/userinfo"
-	AuthURL         string = "https://account.docusign.com/oauth/auth"
-	AuthURLDemo     string = "https://account-d.docusign.com/oauth/auth"
-	TokenURL        string = "https://account.docusign.com/oauth/token"
-	TokenURLDemo    string = "https://account-d.docusign.com/oauth/token"
-	RedirectURL     string = "http://localhost:8080/oauth/redirect"
-	CustomState     string = "Leapforce!DocuSign"
+	apiName         string = "DocuSign"
+	userInfoURL     string = "https://account.docusign.com/oauth/userinfo"
+	userInfoURLDemo string = "https://account-d.docusign.com/oauth/userinfo"
+	authURL         string = "https://account.docusign.com/oauth/auth"
+	authURLDemo     string = "https://account-d.docusign.com/oauth/auth"
+	tokenURL        string = "https://account.docusign.com/oauth/token"
+	tokenURLDemo    string = "https://account-d.docusign.com/oauth/token"
+	redirectURL     string = "http://localhost:8080/oauth/redirect"
+	customState     string = "Leapforce!DocuSign"
 )
 
 // Service stores Service configuration
@@ -39,13 +39,11 @@ type Service struct {
 	oAuth2         *oauth2.OAuth2
 }
 type ServiceConfig struct {
-	UserName              string
-	IntegrationKey        string
-	PrivateKey            string
-	Scopes                string
-	IsDemo                *bool
-	MaxRetries            *uint
-	SecondsBetweenRetries *uint32
+	UserName       string
+	IntegrationKey string
+	PrivateKey     string
+	Scopes         string
+	IsDemo         *bool
 }
 
 // methods
@@ -74,11 +72,11 @@ func NewService(serviceConfig ServiceConfig, bigQueryService *bigquery.Service) 
 	}
 
 	getTokenFunction := func() (*oauth2.Token, *errortools.Error) {
-		return google.GetToken(APIName, serviceConfig.IntegrationKey, bigQueryService)
+		return google.GetToken(apiName, serviceConfig.IntegrationKey, bigQueryService)
 	}
 
 	saveTokenFunction := func(token *oauth2.Token) *errortools.Error {
-		return google.SaveToken(APIName, serviceConfig.IntegrationKey, token, bigQueryService)
+		return google.SaveToken(apiName, serviceConfig.IntegrationKey, token, bigQueryService)
 	}
 
 	newTokenFunction := func() (*oauth2.Token, *errortools.Error) {
@@ -86,11 +84,9 @@ func NewService(serviceConfig ServiceConfig, bigQueryService *bigquery.Service) 
 	}
 
 	oAuth2Config := oauth2.OAuth2Config{
-		GetTokenFunction:      &getTokenFunction,
-		SaveTokenFunction:     &saveTokenFunction,
-		NewTokenFunction:      &newTokenFunction,
-		MaxRetries:            serviceConfig.MaxRetries,
-		SecondsBetweenRetries: serviceConfig.SecondsBetweenRetries,
+		GetTokenFunction:  &getTokenFunction,
+		SaveTokenFunction: &saveTokenFunction,
+		NewTokenFunction:  &newTokenFunction,
 	}
 	service.oAuth2 = oauth2.NewOAuth(oAuth2Config)
 	return &service, nil
@@ -105,17 +101,17 @@ func (service *Service) InitToken(scopes string) *errortools.Error {
 		return errortools.ErrorMessage("Service variable is nil pointer")
 	}
 
-	authURL := AuthURL
+	authURL := authURL
 	if service.isDemo {
-		authURL = AuthURLDemo
+		authURL = authURLDemo
 	}
 
 	values := url.Values{}
 	values.Set("client_id", service.integrationKey)
 	values.Set("response_type", "code")
-	values.Set("redirect_uri", RedirectURL)
+	values.Set("redirect_uri", redirectURL)
 	values.Set("scope", scopes)
-	values.Set("state", CustomState)
+	values.Set("state", customState)
 
 	url2 := fmt.Sprintf("%s?%s", authURL, values.Encode())
 
