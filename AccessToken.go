@@ -79,11 +79,12 @@ func (service *Service) GetAccessToken() (*oauth2.Token, *errortools.Error) {
 	values.Set("assertion", jwt)
 
 	requestConfig := go_http.RequestConfig{
+		Method:        http.MethodPost,
 		URL:           fmt.Sprintf("%s?%s", urlDomain, values.Encode()),
 		ResponseModel: &accessToken,
 	}
 
-	_, _, e := service.httpRequest(http.MethodPost, &requestConfig, true)
+	_, _, e := service.httpRequestWithoutAccessToken(&requestConfig)
 	if e != nil {
 		return nil, e
 	}
